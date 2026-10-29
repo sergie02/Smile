@@ -1,0 +1,2054 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smile CitiHomes 1 - Water Works & Parking Management System</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- SheetJS for Excel Import/Export -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        
+        @media print {
+            @page {
+                size: A4 portrait;
+                margin: 5mm;
+            }
+            .no-print { display: none !important; }
+            .print-only { display: block !important; }
+            body { background: white; color: black; margin: 0; padding: 0; }
+            
+            #printable-all-container {
+                display: flex !important;
+                flex-direction: column !important;
+                justify-content: flex-start !important;
+                box-sizing: border-box !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+
+            .printable-page {
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+                max-width: 100% !important;
+                width: 100% !important;
+                height: 135mm !important;
+                max-height: 135mm !important;
+                overflow: hidden !important;
+                padding: 3mm !important;
+                margin: 0 !important;
+                box-shadow: none !important;
+                border: none !important;
+                box-sizing: border-box !important;
+            }
+
+            .printable-page:nth-child(even) {
+                margin-bottom: 2mm !important;
+            }
+
+            .printable-page:nth-child(odd):not(:first-child) {
+                page-break-before: always !important;
+                break-before: page !important;
+            }
+
+            .printable-page > div {
+                border: 1.5px solid #1e293b !important;
+                padding: 8px !important;
+                height: 100% !important;
+                box-sizing: border-box !important;
+            }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+
+    <!-- LOGIN PAGE VIEW -->
+    <div id="login-view" class="fixed inset-0 z-50 bg-slate-900 flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden p-8 space-y-6">
+            <div class="text-center space-y-2">
+                <div class="flex justify-center mb-1">
+                    <img src="https://media.base44.com/images/public/user_6aa64af8b3deedf5c8841878/baad345a4_SmileLogo.png" 
+                         alt="Smile CitiHomes Condominium Corporation" 
+                         class="h-24 w-24 object-contain rounded-full shadow-sm">
+                </div>
+                <h2 class="text-2xl font-bold text-slate-800">Smile CitiHomes 1</h2>
+                <p class="text-xs text-slate-500">Water Works & Parking Management Portal</p>
+            </div>
+
+            <!-- Role Selector Tabs -->
+            <div class="flex bg-slate-100 p-1 rounded-xl text-xs font-semibold">
+                <button type="button" id="role-btn-admin" onclick="selectLoginRole('admin')" class="flex-1 py-2 rounded-lg bg-white text-blue-700 shadow-sm transition-all flex items-center justify-center">
+                    <i class="fa-solid fa-user-shield mr-1.5"></i> Admin Login
+                </button>
+                <button type="button" id="role-btn-reader" onclick="selectLoginRole('reader')" class="flex-1 py-2 rounded-lg text-slate-500 hover:text-slate-800 transition-all flex items-center justify-center">
+                    <i class="fa-solid fa-clipboard-user mr-1.5"></i> Reader Login
+                </button>
+            </div>
+
+            <form onsubmit="handleLogin(event)" class="space-y-4">
+                <input type="hidden" id="login-role" value="admin">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Username</label>
+                    <div class="relative">
+                        <i class="fa-solid fa-user absolute left-3 top-3 text-slate-400 text-sm"></i>
+                        <input type="text" id="login-username" required placeholder="admin" value="admin" class="pl-9 pr-4 py-2 text-sm w-full bg-slate-50 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Password</label>
+                    <div class="relative">
+                        <i class="fa-solid fa-lock absolute left-3 top-3 text-slate-400 text-sm"></i>
+                        <input type="password" id="login-password" required placeholder="••••••••" value="admin" class="pl-9 pr-4 py-2 text-sm w-full bg-slate-50 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                </div>
+
+                <div id="login-error" class="hidden text-xs text-rose-600 bg-rose-50 p-2.5 rounded-lg border border-rose-200">
+                    <i class="fa-solid fa-circle-exclamation mr-1"></i> Invalid username or password for selected role.
+                </div>
+
+                <button type="submit" id="login-submit-btn" class="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg text-sm shadow-md transition-all flex items-center justify-center">
+                    <i class="fa-solid fa-right-to-bracket mr-2"></i> Sign In as Administrator
+                </button>
+            </form>
+
+            
+        </div>
+    </div>
+
+    <!-- MAIN APP VIEW -->
+    <div id="app-view" class="hidden min-h-screen flex flex-col flex-1">
+        <!-- Navigation Header -->
+        <header class="bg-blue-700 text-white shadow-md no-print">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
+                <div class="flex items-center space-x-3">
+                    <div class="bg-white p-1.5 rounded-lg shadow-inner">
+                        <img src="https://media.base44.com/images/public/user_6aa64af8b3deedf5c8841878/baad345a4_SmileLogo.png" 
+                             alt="Smile CitiHomes Logo" 
+                             class="h-9 w-9 object-contain rounded">
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-bold tracking-wide">Smile CitiHomes 1 Condominium Corporation</h1>
+                        <p class="text-xs text-blue-200">Water Works, Dues & Parking Management System</p>
+                    </div>
+                </div>                
+                
+                <div class="flex items-center space-x-3">
+                    <div class="hidden md:flex flex-col text-right pr-2 border-r border-blue-600">
+                        <span id="current-user-role" class="text-xs font-bold uppercase tracking-wider text-blue-100 bg-blue-800/80 px-2 py-0.5 rounded">Admin Mode</span>
+                    </div>
+
+                    <nav class="flex space-x-1 sm:space-x-2 bg-blue-800/60 p-1.5 rounded-xl text-sm font-medium">
+                        <button onclick="switchTab('dashboard')" id="nav-dashboard" class="tab-btn px-3 py-1.5 rounded-lg transition-all bg-white text-blue-700 shadow-sm admin-only">
+                            <i class="fa-solid fa-chart-pie mr-1.5"></i> Dashboard
+                        </button>
+                        <button onclick="switchTab('customers')" id="nav-customers" class="tab-btn px-3 py-1.5 rounded-lg transition-all text-blue-100 hover:text-white hover:bg-blue-700/50 admin-only">
+                            <i class="fa-solid fa-users mr-1.5"></i> Customers
+                        </button>
+                        <button onclick="switchTab('reader-dash')" id="nav-reader-dash" class="tab-btn px-3 py-1.5 rounded-lg transition-all text-blue-100 hover:text-white hover:bg-blue-700/50 reader-only hidden">
+                            <i class="fa-solid fa-gauge mr-1.5"></i> Reader Console
+                        </button>
+                        <button onclick="switchTab('readings')" id="nav-readings" class="tab-btn px-3 py-1.5 rounded-lg transition-all text-blue-100 hover:text-white hover:bg-blue-700/50">
+                            <i class="fa-solid fa-gauge-high mr-1.5"></i> Meter & Billing
+                        </button>
+                        <button onclick="switchTab('rates')" id="nav-rates" class="tab-btn px-3 py-1.5 rounded-lg transition-all text-blue-100 hover:text-white hover:bg-blue-700/50 admin-only">
+                            <i class="fa-solid fa-sliders mr-1.5"></i> Rate Setup
+                        </button>
+                    </nav>
+
+                    <button onclick="handleLogout()" title="Logout" class="bg-blue-800 hover:bg-rose-600 text-white p-2 rounded-xl text-sm transition-all shadow-sm">
+                        <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content Area -->
+        <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 no-print">
+
+            <!-- ADMIN DASHBOARD TAB -->
+            <section id="tab-dashboard" class="tab-content space-y-6">
+                <!-- KPI Overview Cards -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80 flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Revenue</p>
+                            <h3 id="kpi-total-billed" class="text-2xl font-bold text-slate-800 mt-1">₱0.00</h3>
+                            <p class="text-xs text-slate-400 mt-1"><span class="text-emerald-500 font-medium"><i class="fa-solid fa-arrow-up"></i> Active</span> billing period</p>
+                        </div>
+                        <div class="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center text-xl">
+                            <i class="fa-solid fa-file-invoice-dollar"></i>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80 flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Collected (Paid)</p>
+                            <h3 id="kpi-total-paid" class="text-2xl font-bold text-emerald-600 mt-1">₱0.00</h3>
+                            <p id="kpi-paid-count" class="text-xs text-slate-400 mt-1">0 invoices settled</p>
+                        </div>
+                        <div class="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center text-xl">
+                            <i class="fa-solid fa-circle-check"></i>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80 flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Pending / Unpaid</p>
+                            <h3 id="kpi-total-unpaid" class="text-2xl font-bold text-amber-600 mt-1">₱0.00</h3>
+                            <p id="kpi-unpaid-count" class="text-xs text-slate-400 mt-1">0 awaiting payment</p>
+                        </div>
+                        <div class="w-12 h-12 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center text-xl">
+                            <i class="fa-solid fa-hourglass-half"></i>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80 flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Overdue Bills</p>
+                            <h3 id="kpi-total-overdue" class="text-2xl font-bold text-rose-600 mt-1">₱0.00</h3>
+                            <p id="kpi-overdue-count" class="text-xs text-slate-400 mt-1">0 require collection</p>
+                        </div>
+                        <div class="w-12 h-12 bg-rose-50 text-rose-600 rounded-xl flex items-center justify-center text-xl">
+                            <i class="fa-solid fa-triangle-exclamation"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- DAILY COLLECTION SUMMARY SECTION -->
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-5 space-y-4">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
+                        <div>
+                            <h2 class="text-base font-bold text-slate-800 flex items-center">
+                                <i class="fa-solid fa-cash-register text-emerald-600 mr-2"></i>
+                                Daily Collection Summary Breakdown
+                            </h2>
+                            <p class="text-xs text-slate-500">Real-time daily cashier collections itemized by dues, water consumption, and parking.</p>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <div class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-2 py-1 text-xs">
+                                <span class="font-semibold text-slate-600">Filter Date:</span>
+                                <input type="date" id="daily-filter-date" onchange="renderDailySummaryTable()" class="bg-white border border-slate-200 rounded px-2 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500">
+                                <button onclick="clearDailyFilter()" class="text-slate-400 hover:text-slate-700 px-1" title="Clear Date Filter"><i class="fa-solid fa-xmark"></i></button>
+                            </div>
+                            <span id="kpi-today-collected" class="text-xs bg-emerald-50 text-emerald-700 font-bold px-3 py-1 rounded-full border border-emerald-200">
+                                Today: ₱0.00
+                            </span>
+                            <button onclick="exportDailySummaryExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-3.5 py-1.5 rounded-xl text-xs transition-all flex items-center justify-center shadow-sm">
+                                <i class="fa-solid fa-file-excel mr-1.5"></i> Export Daily
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm">
+                            <thead class="bg-slate-100/70 text-slate-600 font-semibold text-xs uppercase tracking-wider">
+                                <tr>
+                                    <th class="p-3">Payment Date</th>
+                                    <th class="p-3 text-right">Settled Invoices</th>
+                                    <th class="p-3 text-right">Water Volume (m³)</th>
+                                    <th class="p-3 text-right">Condo Dues Total (₱)</th>
+                                    <th class="p-3 text-right">Water Charges (₱)</th>
+                                    <th class="p-3 text-right">Parking Fees (₱)</th>
+                                    <th class="p-3 text-right font-bold">Daily Cash Collected (₱)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="daily-summary-table-body" class="divide-y divide-slate-100 text-slate-700"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- MONTHLY COLLECTION SUMMARY SECTION -->
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-5 space-y-4">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
+                        <div>
+                            <h2 class="text-base font-bold text-slate-800 flex items-center">
+                                <i class="fa-solid fa-calendar-check text-blue-600 mr-2"></i>
+                                Monthly Collection Summary Totals
+                            </h2>
+                            <p class="text-xs text-slate-500">Aggregated collection totals, billing totals, and water consumption per month.</p>
+                        </div>
+                        <button onclick="exportMonthlySummaryExcel()" class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-3.5 py-1.5 rounded-xl text-xs transition-all flex items-center justify-center shadow-sm">
+                            <i class="fa-solid fa-file-excel mr-1.5"></i> Export Summary
+                        </button>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm">
+                            <thead class="bg-slate-100/70 text-slate-600 font-semibold text-xs uppercase tracking-wider">
+                                <tr>
+                                    <th class="p-3">Billing Month</th>
+                                    <th class="p-3 text-right">Invoices</th>
+                                    <th class="p-3 text-right">Consumption (m³)</th>
+                                    <th class="p-3 text-right">Billed Total (₱)</th>
+                                    <th class="p-3 text-right">Collected Total (₱)</th>
+                                    <th class="p-3 text-right">Pending Total (₱)</th>
+                                    <th class="p-3 text-center">Collection Rate</th>
+                                </tr>
+                            </thead>
+                            <tbody id="monthly-summary-table-body" class="divide-y divide-slate-100 text-slate-700"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div class="lg:col-span-2 bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80">
+                        <div class="flex justify-between items-center mb-4">
+                            <h2 class="text-base font-bold text-slate-800">Water Consumption Overview (m³)</h2>
+                            <span class="text-xs bg-slate-100 text-slate-600 font-medium px-2.5 py-1 rounded-full">Current Period</span>
+                        </div>
+                        <div class="h-64 relative">
+                            <canvas id="consumptionChart"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80 flex flex-col">
+                        <h2 class="text-base font-bold text-slate-800 mb-4">Recent Invoices</h2>
+                        <div id="recent-invoices-list" class="space-y-3 flex-1 overflow-y-auto max-h-[260px] pr-1"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- READER DASHBOARD TAB -->
+            <section id="tab-reader-dash" class="tab-content hidden space-y-6">
+                <div class="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-2xl p-6 text-white shadow-md flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div>
+                        <span class="bg-white/20 text-xs px-2.5 py-1 rounded-full font-semibold uppercase tracking-wider mb-2 inline-block">Field Reader Portal</span>
+                        <h2 class="text-2xl font-bold">Meter Reading Field Console</h2>
+                        <p class="text-xs text-blue-100 mt-1">Quickly locate condo units, record water meter readings, and submit monthly usage data.</p>
+                    </div>
+                    <button onclick="openReadingModal()" class="bg-white text-blue-700 hover:bg-blue-50 font-bold px-5 py-2.5 rounded-xl text-sm transition-all shadow-lg flex items-center">
+                        <i class="fa-solid fa-gauge mr-2"></i> Record New Reading
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80 flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Active Meters</p>
+                            <h3 id="reader-kpi-total-meters" class="text-2xl font-bold text-slate-800 mt-1">0</h3>
+                            <p class="text-xs text-slate-400 mt-1">Registered units</p>
+                        </div>
+                        <div class="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center text-xl">
+                            <i class="fa-solid fa-faucet-drip"></i>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80 flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Meter Logs</p>
+                            <h3 id="reader-kpi-logged-readings" class="text-2xl font-bold text-indigo-600 mt-1">0</h3>
+                            <p class="text-xs text-slate-400 mt-1">Readings recorded</p>
+                        </div>
+                        <div class="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center text-xl">
+                            <i class="fa-solid fa-list-check"></i>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80 flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Current Period Usage</p>
+                            <h3 id="reader-kpi-total-m3" class="text-2xl font-bold text-emerald-600 mt-1">0 m³</h3>
+                            <p class="text-xs text-slate-400 mt-1">Aggregate water consumed</p>
+                        </div>
+                        <div class="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center text-xl">
+                            <i class="fa-solid fa-droplet"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80 space-y-4">
+                        <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                            <h3 class="font-bold text-slate-800 text-base">Quick Customer & Meter Lookup</h3>
+                            <span class="text-xs bg-slate-100 text-slate-600 font-semibold px-2 py-1 rounded">Active Residents</span>
+                        </div>
+                        <div class="relative">
+                            <i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-slate-400 text-sm"></i>
+                            <input type="text" id="reader-search-input" oninput="renderReaderCustomerLookup()" placeholder="Search resident name, unit, or meter serial..." class="pl-9 pr-4 py-2 text-sm w-full bg-slate-50 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div id="reader-customer-lookup-list" class="space-y-2 max-h-[300px] overflow-y-auto pr-1"></div>
+                    </div>
+
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80 space-y-4">
+                        <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                            <h3 class="font-bold text-slate-800 text-base">Recent Meter Readings Logged</h3>
+                            <button onclick="switchTab('readings')" class="text-xs text-blue-600 font-semibold hover:underline">View All</button>
+                        </div>
+                        <div id="reader-recent-logs-list" class="space-y-3 max-h-[340px] overflow-y-auto pr-1"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- CUSTOMERS TAB -->
+            <section id="tab-customers" class="tab-content hidden space-y-6">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                        <h2 class="text-xl font-bold text-slate-800">Customer Directory</h2>
+                        <p class="text-sm text-slate-500">Manage account details, meter numbers, status update dates, and export records.</p>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <button onclick="exportCustomersExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-3.5 py-2 rounded-xl text-sm transition-all flex items-center justify-center shadow-sm">
+                            <i class="fa-solid fa-file-excel mr-2"></i> Export Customers
+                        </button>
+                        <button onclick="openCustomerModal()" class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-xl text-sm transition-all flex items-center justify-center shadow-sm admin-only">
+                            <i class="fa-solid fa-user-plus mr-2"></i> Add New Customer
+                        </button>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden">
+                    <div class="p-4 border-b border-slate-100 bg-slate-50/50 flex items-center">
+                        <div class="relative flex-1 max-w-xs">
+                            <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-sm"></i>
+                            <input type="text" id="search-customer" oninput="renderCustomers()" placeholder="Search customer name or meter..." class="pl-9 pr-4 py-1.5 text-sm w-full bg-white rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm">
+                            <thead class="bg-slate-100/70 text-slate-600 font-semibold text-xs uppercase tracking-wider">
+                                <tr>
+                                    <th class="p-3.5">Acc #</th>
+                                    <th class="p-3.5">Customer Name</th>
+                                    <th class="p-3.5">Meter Serial</th>
+                                    <th class="p-3.5">Address</th>
+                                    <th class="p-3.5">Contact</th>
+                                    <th class="p-3.5 text-center">Status & Update Date</th>
+                                    <th class="p-3.5 text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="customer-table-body" class="divide-y divide-slate-100 text-slate-700"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- READINGS & BILLING TAB -->
+            <section id="tab-readings" class="tab-content hidden space-y-6">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                        <h2 class="text-xl font-bold text-slate-800">Meter Readings & Invoicing</h2>
+                        <p class="text-sm text-slate-500">Record water usage, condo dues, parking fees, generate invoices, or sync via Excel.</p>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <button onclick="printAllStatementsOfAccount()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-3.5 py-2 rounded-xl text-sm transition-all flex items-center justify-center shadow-sm">
+                            <i class="fa-solid fa-print mr-2"></i> Print All SOAs
+                        </button>
+                        <label class="bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-3.5 py-2 rounded-xl text-sm transition-all flex items-center justify-center shadow-sm cursor-pointer admin-only">
+                            <i class="fa-solid fa-file-import mr-2"></i> Import Excel
+                            <input type="file" id="excel-import-input" accept=".xlsx, .xls" onchange="importInvoicesExcel(event)" class="hidden">
+                        </label>
+                        <button onclick="exportInvoicesExcel()" class="bg-emerald-700 hover:bg-emerald-800 text-white font-medium px-3.5 py-2 rounded-xl text-sm transition-all flex items-center justify-center shadow-sm">
+                            <i class="fa-solid fa-file-excel mr-2"></i> Export Excel
+                        </button>
+                        <button onclick="openReadingModal()" class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-xl text-sm transition-all flex items-center justify-center shadow-sm">
+                            <i class="fa-solid fa-gauge mr-2"></i> Record New Reading
+                        </button>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden space-y-4">
+                    <div class="p-4 border-b border-slate-100 bg-slate-50/50 flex flex-wrap items-center justify-between gap-3">
+                        <div class="flex items-center gap-2">
+                            <div class="flex items-center gap-1.5 bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-xs shadow-sm">
+                                <span class="font-semibold text-slate-600"><i class="fa-solid fa-calendar-days mr-1 text-blue-600"></i> Filter Month:</span>
+                                <select id="readings-filter-month" onchange="renderReadings()" class="bg-white border border-slate-200 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 font-medium text-slate-700">
+                                    <option value="">All Months</option>
+                                    <option value="Jan">January</option>
+                                    <option value="Feb">February</option>
+                                    <option value="Mar">March</option>
+                                    <option value="Apr">April</option>
+                                    <option value="May">May</option>
+                                    <option value="Jun">June</option>
+                                    <option value="Jul">July</option>
+                                    <option value="Aug">August</option>
+                                    <option value="Sep">September</option>
+                                    <option value="Oct">October</option>
+                                    <option value="Nov">November</option>
+                                    <option value="Dec">December</option>
+                                </select>
+                                <button onclick="clearReadingsFilter()" class="text-slate-400 hover:text-slate-700 px-1 ml-1" title="Clear Month Filter"><i class="fa-solid fa-xmark"></i></button>
+                            </div>
+                        </div>
+                        <div class="text-xs text-slate-500 font-medium" id="readings-filter-count">Showing all records</div>
+                    </div>
+                    <div class="overflow-x-auto px-4 pb-4">
+                        <table class="w-full text-left text-sm">
+                            <thead class="bg-slate-100/70 text-slate-600 font-semibold text-xs uppercase tracking-wider">
+                                <tr>
+                                    <th class="p-3.5">Invoice #</th>
+                                    <th class="p-3.5">Customer</th>
+                                    <th class="p-3.5 text-right">Usage (m³)</th>
+                                    <th class="p-3.5 text-center">Dues</th>
+                                    <th class="p-3.5 text-center">Parking</th>
+                                    <th class="p-3.5 text-right">Amount (₱)</th>
+                                    <th class="p-3.5 text-center">Due Date</th>
+                                    <th class="p-3.5 text-center">Status</th>
+                                    <th class="p-3.5 text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="readings-table-body" class="divide-y divide-slate-100 text-slate-700"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- RATE SETUP TAB -->
+            <section id="tab-rates" class="tab-content hidden space-y-6">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h2 class="text-xl font-bold text-slate-800">Rate Configuration</h2>
+                        <p class="text-sm text-slate-500">Configure water utility tiers, condominium dues, and fixed car/motorcycle parking billing rates.</p>
+                    </div>
+                    <button onclick="saveRates()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-4 py-2 rounded-xl text-sm transition-all shadow-sm">
+                        <i class="fa-solid fa-floppy-disk mr-2"></i> Save Changes
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80 space-y-4">
+                        <h3 class="text-base font-bold text-slate-800 border-b border-slate-100 pb-2 flex items-center">
+                            <i class="fa-solid fa-building text-blue-600 mr-2"></i> Condominium Dues
+                        </h3>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Monthly Condo Dues (₱)</label>
+                            <input type="number" id="rate-condo-dues" value="500.00" step="0.01" class="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                            <p class="text-[11px] text-slate-400 mt-1">Fixed monthly assessment per unit.</p>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80 space-y-4">
+                        <h3 class="text-base font-bold text-slate-800 border-b border-slate-100 pb-2 flex items-center">
+                            <i class="fa-solid fa-house-water text-blue-600 mr-2"></i> Water Base Charge
+                        </h3>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Base Fee (₱)</label>
+                            <input type="number" id="rate-base-fee" value="180.00" step="0.01" class="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Base Allowance (m³)</label>
+                            <input type="number" id="rate-base-allowance" value="10" class="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80 space-y-4">
+                        <h3 class="text-base font-bold text-slate-800 border-b border-slate-100 pb-2 flex items-center">
+                            <i class="fa-solid fa-layer-group text-blue-600 mr-2"></i> Tier Water Rates (₱/m³)
+                        </h3>
+                        <div class="space-y-3">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">Tier 1: 11 - 20 m³ Rate</label>
+                                <input type="number" id="rate-tier1" value="21.50" step="0.01" class="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">Tier 2: 21 - 30 m³ Rate</label>
+                                <input type="number" id="rate-tier2" value="26.80" step="0.01" class="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">Tier 3: Above 30 m³ Rate</label>
+                                <input type="number" id="rate-tier3" value="35.00" step="0.01" class="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80 space-y-4">
+                        <h3 class="text-base font-bold text-slate-800 border-b border-slate-100 pb-2 flex items-center">
+                            <i class="fa-solid fa-square-parking text-blue-600 mr-2"></i> Fixed Parking Rates
+                        </h3>
+                        <div class="space-y-3">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">Motorcycle Parking Rate (₱)</label>
+                                <input type="number" id="rate-motorcycle-parking" value="400.00" step="0.01" class="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">Car Parking Rate (₱)</label>
+                                <input type="number" id="rate-car-parking" value="500.00" step="0.01" class="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- PRINTABLE STATEMENT OF ACCOUNT TEMPLATE (Half A4 Landscape) -->
+    <div id="printable-bill" class="hidden print-only p-4 mx-auto bg-white text-slate-900 font-sans printable-page" style="width: 148mm; min-height: 105mm; max-height: 148mm; overflow: hidden; box-sizing: border-box;">
+        <div class="border-2 border-slate-800 p-3 rounded-lg space-y-2 text-[10px]">
+            <div class="flex justify-between items-center border-b-2 border-slate-800 pb-2">
+                <div class="flex items-center space-x-2.5">
+                    <img src="https://media.base44.com/images/public/user_6aa64af8b3deedf5c8841878/baad345a4_SmileLogo.png" alt="Smile Logo" class="h-10 w-10 object-contain rounded-full border border-slate-300">
+                    <div>
+                        <h1 class="text-sm font-bold uppercase tracking-wider text-blue-900 leading-tight">Smile CitiHomes 1 Condominium</h1>
+                        <p class="text-[9px] text-slate-600">Smile Citihomes 1, Zabarte Rd., Brgy. Kaligayahan, Novaliches, QC</p>
+                        <p class="text-[9px] text-slate-600">Condo Dues, Water Works & Parking Billing</p>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <span class="inline-block bg-slate-100 text-slate-800 border border-slate-400 font-bold px-1.5 py-0.5 text-[10px] rounded">STATEMENT OF ACCOUNT</span>
+                    <p id="print-invoice-id" class="text-[11px] font-mono font-bold mt-0.5">INV-2026-000</p>
+                    <p id="print-date" class="text-[9px] text-slate-500"></p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2 bg-slate-50 p-2 rounded border border-slate-200">
+                <div>
+                    <p class="text-[9px] text-slate-500 uppercase font-semibold">Account Details</p>
+                    <p id="print-cust-name" class="font-bold text-[11px] text-slate-800 mt-0.5">Juan Dela Cruz</p>
+                    <p id="print-cust-acc" class="text-[9px] text-slate-600">Account #: ACC-8801</p>
+                    <p id="print-cust-addr" class="text-[9px] text-slate-600">124 Rizal Ave, Quezon City</p>
+                </div>
+                <div>
+                    <p class="text-[9px] text-slate-500 uppercase font-semibold">Meter & Billing Details</p>
+                    <p id="print-meter-sn" class="font-bold text-[11px] text-slate-800 mt-0.5">Meter S/N: MTR-2021-01</p>
+                    <p id="print-reading-date" class="text-[9px] text-slate-600">Billing Month: Aug 2026</p>
+                    <p id="print-due-date" class="text-[9px] text-rose-600 font-semibold">Due Date: 2026-09-15</p>
+                </div>
+            </div>
+
+            <div>
+                <table class="w-full text-[10px] text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-800 text-white font-semibold">
+                            <th class="p-1">Prev Reading (m³)</th>
+                            <th class="p-1">Curr Reading (m³)</th>
+                            <th class="p-1 text-right">Consumption (m³)</th>
+                        </tr>
+                    </thead>
+                    <tbody class="border-b border-slate-300">
+                        <tr>
+                            <td id="print-prev-reading" class="p-1">0.00</td>
+                            <td id="print-curr-reading" class="p-1">0.00</td>
+                            <td id="print-usage" class="p-1 text-right font-bold text-[11px]">0.00 m³</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="space-y-1 border-t border-slate-200 pt-1.5">
+                <div class="flex justify-between">
+                    <span class="text-slate-600 font-semibold">Condominium Dues (Current Month)</span>
+                    <span id="print-condo-dues" class="font-medium">₱500.00</span>
+                </div>
+                <div id="print-adv-condo-row" class="flex justify-between hidden text-emerald-700">
+                    <span id="print-adv-condo-label">Advance Condo Dues</span>
+                    <span id="print-adv-condo-charge" class="font-medium">₱0.00</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-slate-600">Base Water Charge (Includes 10m³)</span>
+                    <span id="print-base-charge" class="font-medium">₱180.00</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-slate-600">Tiered Water Consumption Charge</span>
+                    <span id="print-tier-charge" class="font-medium">₱0.00</span>
+                </div>
+                <div id="print-parking-row" class="flex justify-between hidden">
+                    <span id="print-parking-label" class="text-slate-600">Parking Fee</span>
+                    <span id="print-parking-charge" class="font-medium">₱0.00</span>
+                </div>
+                <div id="print-adv-parking-row" class="flex justify-between hidden text-emerald-700">
+                    <span id="print-adv-parking-label">Advance Parking Fee</span>
+                    <span id="print-adv-parking-charge" class="font-medium">₱0.00</span>
+                </div>
+                <div class="flex justify-between border-t-2 border-slate-800 pt-1 text-[11px] font-bold">
+                    <span>TOTAL AMOUNT DUE</span>
+                    <span id="print-total-amount" class="text-blue-900 text-xs">₱0.00</span>
+                </div>
+            </div>
+
+            <div class="text-[8.5px] text-slate-500 border-t border-dashed border-slate-300 pt-1.5 flex justify-between items-center">
+                <div>
+                    <p class="font-semibold text-slate-700">Payment Channels:</p>
+                    <p>GCash / Maya (Biller Code: SMILE CONDO & WATER) • Administration Office</p>
+                </div>
+                <div class="text-right">
+                    <p class="font-bold text-slate-800">Status: <span id="print-status" class="uppercase">UNPAID</span></p>
+                </div>
+            </div>
+
+            <div class="border-t border-slate-300 pt-1 text-[8.5px] text-slate-700 space-y-0.5">
+                <p class="font-bold uppercase tracking-wider text-slate-800 mb-0.5">Important Reminders & Regulations:</p>
+                <ul class="list-disc pl-3 space-y-0 text-slate-600">
+                    <li>All overdue accounts are subject to a 5% penalty per month after 7 days from the due date.</li>
+                    <li>Delinquent accounts for 7 days will be subject to facility disconnection. Reconnection fee: ₱350.00.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- CONTAINER FOR MULTIPLE PRINTABLE SOAs -->
+    <div id="printable-all-container" class="hidden print-only"></div>
+
+    <!-- MODALS -->
+    <!-- Add/Edit Customer Modal -->
+    <div id="modal-customer" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center hidden z-50 p-4">
+        <div class="bg-white w-full max-w-md rounded-2xl shadow-xl overflow-hidden">
+            <div class="bg-blue-600 text-white px-5 py-4 flex justify-between items-center">
+                <h3 class="font-bold" id="modal-customer-title">Add Customer</h3>
+                <button onclick="closeCustomerModal()" class="text-white/80 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <form onsubmit="saveCustomer(event)" class="p-5 space-y-4">
+                <input type="hidden" id="customer-id-edit" value="">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Customer Name</label>
+                    <input type="text" id="cust-name" required placeholder="e.g. Maria Santos" class="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Account Number</label>
+                        <input type="text" id="cust-acc" required placeholder="ACC-8802" class="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Meter Serial Number</label>
+                        <input type="text" id="cust-meter" required placeholder="MTR-2021-02" class="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Condo Unit / Address</label>
+                    <input type="text" id="cust-addr" required placeholder="Unit 4B, Bldg 2" class="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Contact Number</label>
+                        <input type="text" id="cust-contact" placeholder="09123456789" class="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Account Status</label>
+                        <select id="cust-status" class="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white">
+                            <option value="Active">Active</option>
+                            <option value="Inactive">Inactive</option>
+                            <option value="Disconnected">Disconnected</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="flex justify-end space-x-2 pt-3 border-t border-slate-100">
+                    <button type="button" onclick="closeCustomerModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-xl text-sm transition-all">Cancel</button>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl text-sm transition-all shadow-sm">Save Customer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Record Reading & Generate Invoice Modal -->
+    <div id="modal-reading" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center hidden z-50 p-4">
+        <div class="bg-white w-full max-w-lg rounded-2xl shadow-xl overflow-hidden max-h-[90vh] flex flex-col">
+            <div class="bg-blue-600 text-white px-5 py-4 flex justify-between items-center">
+                <h3 class="font-bold">Record Meter Reading & Invoicing</h3>
+                <button onclick="closeReadingModal()" class="text-white/80 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <form onsubmit="saveReadingAndBilling(event)" class="p-5 space-y-4 overflow-y-auto flex-1">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Select Customer</label>
+                    <select id="read-customer-select" onchange="onCustomerSelectChange()" required class="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white">
+                        <option value="">-- Choose Customer --</option>
+                    </select>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Billing Month</label>
+                        <input type="text" id="read-billing-month" required placeholder="e.g. Sep 2026" class="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Due Date</label>
+                        <input type="date" id="read-due-date" required class="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Previous Reading (m³)</label>
+                        <input type="number" step="0.01" id="read-prev" required oninput="calculatePreviewBill()" class="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Current Reading (m³)</label>
+                        <input type="number" step="0.01" id="read-curr" required oninput="calculatePreviewBill()" class="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    </div>
+                </div>
+
+                <!-- Parking Option -->
+                <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-2">
+                    <p class="text-xs font-bold text-slate-700 uppercase">Parking Assessment Option</p>
+                    <div class="flex gap-4">
+                        <label class="flex items-center text-xs font-medium text-slate-600 cursor-pointer">
+                            <input type="checkbox" id="read-has-motorcycle" onchange="calculatePreviewBill()" class="mr-1.5 h-4 w-4 text-blue-600 rounded border-slate-300"> Motorcycle Parking (₱400)
+                        </label>
+                        <label class="flex items-center text-xs font-medium text-slate-600 cursor-pointer">
+                            <input type="checkbox" id="read-has-car" onchange="calculatePreviewBill()" class="mr-1.5 h-4 w-4 text-blue-600 rounded border-slate-300"> Car Parking (₱500)
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Advance Payments Section -->
+                <div class="bg-emerald-50/60 p-3.5 rounded-xl border border-emerald-200 space-y-3">
+                    <p class="text-xs font-bold text-emerald-800 uppercase flex items-center">
+                        <i class="fa-solid fa-coins mr-1.5"></i> Advance Payments (Optional)
+                    </p>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[11px] font-semibold text-slate-600 mb-1">Adv. Condo Dues (Months)</label>
+                            <input type="number" min="0" max="12" id="read-adv-condo-months" value="0" oninput="calculatePreviewBill()" class="w-full px-3 py-1.5 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none bg-white">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-semibold text-slate-600 mb-1">Adv. Parking Fee (Months)</label>
+                            <input type="number" min="0" max="12" id="read-adv-parking-months" value="0" oninput="calculatePreviewBill()" class="w-full px-3 py-1.5 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none bg-white">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Live Bill Summary Preview -->
+                <div class="bg-blue-50/50 p-4 rounded-xl border border-blue-100 space-y-1.5 text-xs">
+                    <div class="flex justify-between text-slate-600">
+                        <span>Water Usage:</span>
+                        <span id="preview-usage" class="font-bold text-slate-800">0.00 m³</span>
+                    </div>
+                    <div class="flex justify-between text-slate-600">
+                        <span>Condo Dues (Current):</span>
+                        <span id="preview-condo" class="font-medium">₱500.00</span>
+                    </div>
+                    <div class="flex justify-between text-emerald-700 font-medium">
+                        <span>Advance Condo Dues:</span>
+                        <span id="preview-adv-condo">₱0.00</span>
+                    </div>
+                    <div class="flex justify-between text-slate-600">
+                        <span>Water Charges (Base + Tiers):</span>
+                        <span id="preview-water" class="font-medium">₱180.00</span>
+                    </div>
+                    <div class="flex justify-between text-slate-600">
+                        <span>Parking Fee (Current):</span>
+                        <span id="preview-parking" class="font-medium">₱0.00</span>
+                    </div>
+                    <div class="flex justify-between text-emerald-700 font-medium">
+                        <span>Advance Parking Fee:</span>
+                        <span id="preview-adv-parking">₱0.00</span>
+                    </div>
+                    <div class="flex justify-between border-t border-blue-200 pt-2 text-sm font-bold text-blue-900">
+                        <span>Estimated Total Amount:</span>
+                        <span id="preview-total">₱680.00</span>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Invoice Status</label>
+                    <select id="read-status" class="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white">
+                        <option value="Unpaid">Unpaid</option>
+                        <option value="Paid">Paid</option>
+                        <option value="Overdue">Overdue</option>
+                    </select>
+                </div>
+                <div class="flex justify-end space-x-2 pt-3 border-t border-slate-100">
+                    <button type="button" onclick="closeReadingModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-xl text-sm transition-all">Cancel</button>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl text-sm transition-all shadow-sm">Save & Generate Invoice</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- JavaScript App Logic -->
+    <script>
+        const todayStr = new Date().toISOString().split('T')[0];
+
+        let customers = JSON.parse(localStorage.getItem('smile_customers')) || [
+            { id: '1', name: 'Juan Dela Cruz', acc: 'ACC-8801', meter: 'MTR-2021-01', addr: 'Blk 1 Lot 2, Smile CitiHomes 1', contact: '09171234567', status: 'Active', statusDate: '2026-01-10' },
+            { id: '2', name: 'Maria Santos', acc: 'ACC-8802', meter: 'MTR-2021-02', addr: 'Blk 3 Lot 5, Smile CitiHomes 1', contact: '09189876543', status: 'Active', statusDate: '2026-02-15' },
+            { id: '3', name: 'Antonio Reyes', acc: 'ACC-8803', meter: 'MTR-2021-03', addr: 'Blk 2 Lot 10, Smile CitiHomes 1', contact: '09223334455', status: 'Inactive', statusDate: '2026-05-20' }
+        ];
+
+        let invoices = JSON.parse(localStorage.getItem('smile_invoices')) || [
+            { id: 'INV-2026-001', customerId: '1', billingMonth: 'Aug 2026', dueDate: '2026-09-15', paidDate: todayStr, prevReading: 120.5, currReading: 135.0, condoDues: 500, advCondoMonths: 0, advCondoPay: 0, baseCharge: 180, tierCharge: 322.5, hasMotorcycle: true, hasCar: false, parkingFee: 400, advParkingMonths: 0, advParkingPay: 0, totalAmount: 1402.5, status: 'Paid' },
+            { id: 'INV-2026-002', customerId: '2', billingMonth: 'Aug 2026', dueDate: '2026-09-15', paidDate: null, prevReading: 85.0, currReading: 94.2, condoDues: 500, advCondoMonths: 0, advCondoPay: 0, baseCharge: 180, tierCharge: 197.8, hasMotorcycle: false, hasCar: true, parkingFee: 500, advParkingMonths: 0, advParkingPay: 0, totalAmount: 1377.8, status: 'Unpaid' },
+            { id: 'INV-2026-003', customerId: '3', billingMonth: 'Jul 2026', dueDate: '2026-08-15', paidDate: null, prevReading: 210.0, currReading: 232.0, condoDues: 500, advCondoMonths: 0, advCondoPay: 0, baseCharge: 180, tierCharge: 483.0, hasMotorcycle: false, hasCar: false, parkingFee: 0, advParkingMonths: 0, advParkingPay: 0, totalAmount: 1163.0, status: 'Overdue' }
+        ];
+
+        let rates = JSON.parse(localStorage.getItem('smile_rates')) || {
+            condoDues: 500.00,
+            baseFee: 180.00,
+            baseAllowance: 10,
+            tier1: 21.50,
+            tier2: 26.80,
+            tier3: 35.00,
+            motorcycleParking: 400.00,
+            carParking: 500.00
+        };
+
+        let currentRole = sessionStorage.getItem('smile_role') || null;
+        let consumptionChartInstance = null;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            if(sessionStorage.getItem('smile_logged_in') === 'true' && currentRole) {
+                showAppView(currentRole);
+            }
+            loadRatesToUI();
+            renderCustomers();
+            renderReadings();
+        });
+
+        function selectLoginRole(role) {
+            document.getElementById('login-role').value = role;
+            const btnAdmin = document.getElementById('role-btn-admin');
+            const btnReader = document.getElementById('role-btn-reader');
+            const submitBtn = document.getElementById('login-submit-btn');
+            const userInp = document.getElementById('login-username');
+            const passInp = document.getElementById('login-password');
+
+            if(role === 'admin') {
+                btnAdmin.className = "flex-1 py-2 rounded-lg bg-white text-blue-700 shadow-sm transition-all flex items-center justify-center";
+                btnReader.className = "flex-1 py-2 rounded-lg text-slate-500 hover:text-slate-800 transition-all flex items-center justify-center";
+                submitBtn.innerHTML = `<i class="fa-solid fa-right-to-bracket mr-2"></i> Sign In as Administrator`;
+                submitBtn.className = "w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg text-sm shadow-md transition-all flex items-center justify-center";
+                userInp.value = 'admin';
+                passInp.value = 'admin';
+            } else {
+                btnReader.className = "flex-1 py-2 rounded-lg bg-white text-indigo-700 shadow-sm transition-all flex items-center justify-center";
+                btnAdmin.className = "flex-1 py-2 rounded-lg text-slate-500 hover:text-slate-800 transition-all flex items-center justify-center";
+                submitBtn.innerHTML = `<i class="fa-solid fa-clipboard-user mr-2"></i> Sign In as Meter Reader`;
+                submitBtn.className = "w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg text-sm shadow-md transition-all flex items-center justify-center";
+                userInp.value = 'reader';
+                passInp.value = 'reader';
+            }
+            document.getElementById('login-error').classList.add('hidden');
+        }
+
+        function handleLogin(e) {
+            e.preventDefault();
+            const u = document.getElementById('login-username').value.trim();
+            const p = document.getElementById('login-password').value.trim();
+            const role = document.getElementById('login-role').value;
+
+            if (role === 'admin' && u === 'admin' && p === 'admin') {
+                sessionStorage.setItem('smile_logged_in', 'true');
+                sessionStorage.setItem('smile_role', 'admin');
+                showAppView('admin');
+            } else if (role === 'reader' && u === 'reader' && p === 'reader') {
+                sessionStorage.setItem('smile_logged_in', 'true');
+                sessionStorage.setItem('smile_role', 'reader');
+                showAppView('reader');
+            } else {
+                document.getElementById('login-error').classList.remove('hidden');
+            }
+        }
+
+        function handleLogout() {
+            sessionStorage.removeItem('smile_logged_in');
+            sessionStorage.removeItem('smile_role');
+            document.getElementById('app-view').classList.add('hidden');
+            document.getElementById('login-view').classList.remove('hidden');
+        }
+
+        function showAppView(role) {
+            currentRole = role;
+            document.getElementById('login-view').classList.add('hidden');
+            document.getElementById('app-view').classList.remove('hidden');
+
+            const badge = document.getElementById('current-user-role');
+
+            if (role === 'admin') {
+                badge.innerText = "Admin Portal";
+                badge.className = "text-xs font-bold uppercase tracking-wider text-blue-100 bg-blue-800/80 px-2 py-0.5 rounded";
+                document.querySelectorAll('.admin-only').forEach(el => el.classList.remove('hidden'));
+                document.querySelectorAll('.reader-only').forEach(el => el.classList.add('hidden'));
+                switchTab('dashboard');
+            } else {
+                badge.innerText = "Meter Reader Console";
+                badge.className = "text-xs font-bold uppercase tracking-wider text-indigo-100 bg-indigo-900/80 px-2 py-0.5 rounded";
+                document.querySelectorAll('.admin-only').forEach(el => el.classList.add('hidden'));
+                document.querySelectorAll('.reader-only').forEach(el => el.classList.remove('hidden'));
+                switchTab('reader-dash');
+            }
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(el => {
+                el.classList.remove('bg-white', 'text-blue-700', 'shadow-sm');
+                el.classList.add('text-blue-100', 'hover:text-white', 'hover:bg-blue-700/50');
+            });
+
+            document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+            const activeBtn = document.getElementById(`nav-${tabId}`);
+            if(activeBtn) {
+                activeBtn.classList.remove('text-blue-100', 'hover:text-white', 'hover:bg-blue-700/50');
+                activeBtn.classList.add('bg-white', 'text-blue-700', 'shadow-sm');
+            }
+
+            if(tabId === 'dashboard') {
+                updateDashboard();
+                initChart();
+            } else if(tabId === 'reader-dash') {
+                updateReaderDashboard();
+            }
+        }
+
+        function updateReaderDashboard() {
+            document.getElementById('reader-kpi-total-meters').innerText = customers.length;
+            document.getElementById('reader-kpi-logged-readings').innerText = invoices.length;
+
+            let totalM3 = 0;
+            invoices.forEach(inv => {
+                totalM3 += Math.max(0, inv.currReading - inv.prevReading);
+            });
+            document.getElementById('reader-kpi-total-m3').innerText = `${totalM3.toFixed(2)} m³`;
+
+            renderReaderCustomerLookup();
+            renderReaderRecentLogs();
+        }
+
+        function renderReaderCustomerLookup() {
+            const query = (document.getElementById('reader-search-input')?.value || '').toLowerCase();
+            const listContainer = document.getElementById('reader-customer-lookup-list');
+            if(!listContainer) return;
+            listContainer.innerHTML = '';
+
+            const filtered = customers.filter(c => c.name.toLowerCase().includes(query) || c.meter.toLowerCase().includes(query) || c.acc.toLowerCase().includes(query) || c.addr.toLowerCase().includes(query));
+
+            if(filtered.length === 0) {
+                listContainer.innerHTML = `<p class="text-xs text-slate-400 text-center py-4">No matching units found.</p>`;
+                return;
+            }
+
+            filtered.forEach(c => {
+                const custInvoices = invoices.filter(i => i.customerId === c.id);
+                let lastReadingStr = 'No previous logs';
+                if(custInvoices.length > 0) {
+                    const lastInv = custInvoices[custInvoices.length - 1];
+                    lastReadingStr = `Last: ${lastInv.currReading} m³ (${lastInv.billingMonth})`;
+                }
+
+                listContainer.innerHTML += `
+                    <div class="p-3 bg-slate-50 rounded-xl border border-slate-200/80 flex items-center justify-between hover:border-blue-300 transition-all">
+                        <div>
+                            <p class="font-bold text-slate-800 text-xs">${c.name} <span class="text-blue-600 font-mono">(${c.acc})</span></p>
+                            <p class="text-[11px] text-slate-500">${c.addr}</p>
+                            <p class="text-[11px] font-mono text-slate-400 mt-0.5"><i class="fa-solid fa-gauge-high mr-1"></i>${c.meter} • ${lastReadingStr}</p>
+                        </div>
+                        <button onclick="quickRecordReadingForCustomer('${c.id}')" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-medium shadow-sm transition-all flex items-center">
+                            <i class="fa-solid fa-plus mr-1"></i> Log
+                        </button>
+                    </div>
+                `;
+            });
+        }
+
+        function renderReaderRecentLogs() {
+            const container = document.getElementById('reader-recent-logs-list');
+            if(!container) return;
+            container.innerHTML = '';
+
+            if(invoices.length === 0) {
+                container.innerHTML = `<p class="text-xs text-slate-400 text-center py-4">No recent readings recorded.</p>`;
+                return;
+            }
+
+            invoices.slice(-6).reverse().forEach(inv => {
+                const cust = customers.find(c => c.id === inv.customerId) || { name: 'Resident', meter: 'MTR-0000' };
+                const usage = Math.max(0, inv.currReading - inv.prevReading).toFixed(2);
+
+                container.innerHTML += `
+                    <div class="p-3 bg-slate-50 rounded-xl border border-slate-200/80 flex items-center justify-between text-xs">
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <span class="font-bold text-slate-800">${cust.name}</span>
+                                <span class="text-[10px] bg-blue-50 text-blue-700 px-2 py-0.5 rounded font-mono font-bold">${inv.billingMonth}</span>
+                            </div>
+                            <p class="text-[11px] text-slate-500 mt-0.5">Meter: ${cust.meter} | Prev: ${inv.prevReading} m³ ➔ Curr: ${inv.currReading} m³</p>
+                        </div>
+                        <div class="text-right font-mono">
+                            <span class="font-bold text-blue-700 text-sm">${usage} m³</span>
+                            <p class="text-[10px] text-slate-400">Recorded</p>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function quickRecordReadingForCustomer(customerId) {
+            openReadingModal();
+            const select = document.getElementById('read-customer-select');
+            select.value = customerId;
+            onCustomerSelectChange();
+        }
+
+        function loadRatesToUI() {
+            document.getElementById('rate-condo-dues').value = rates.condoDues;
+            document.getElementById('rate-base-fee').value = rates.baseFee;
+            document.getElementById('rate-base-allowance').value = rates.baseAllowance;
+            document.getElementById('rate-tier1').value = rates.tier1;
+            document.getElementById('rate-tier2').value = rates.tier2;
+            document.getElementById('rate-tier3').value = rates.tier3;
+            document.getElementById('rate-motorcycle-parking').value = rates.motorcycleParking;
+            document.getElementById('rate-car-parking').value = rates.carParking;
+        }
+
+        function saveRates() {
+            rates.condoDues = parseFloat(document.getElementById('rate-condo-dues').value) || 0;
+            rates.baseFee = parseFloat(document.getElementById('rate-base-fee').value) || 0;
+            rates.baseAllowance = parseInt(document.getElementById('rate-base-allowance').value) || 10;
+            rates.tier1 = parseFloat(document.getElementById('rate-tier1').value) || 0;
+            rates.tier2 = parseFloat(document.getElementById('rate-tier2').value) || 0;
+            rates.tier3 = parseFloat(document.getElementById('rate-tier3').value) || 0;
+            rates.motorcycleParking = parseFloat(document.getElementById('rate-motorcycle-parking').value) || 0;
+            rates.carParking = parseFloat(document.getElementById('rate-car-parking').value) || 0;
+
+            localStorage.setItem('smile_rates', JSON.stringify(rates));
+            alert('Rate configuration saved successfully!');
+            updateDashboard();
+        }
+
+        function calculateWaterCharge(usage) {
+            if(usage <= rates.baseAllowance) {
+                return { baseCharge: rates.baseFee, tierCharge: 0 };
+            }
+            let excess = usage - rates.baseAllowance;
+            let tierCharge = 0;
+
+            if(excess <= 10) { 
+                tierCharge = excess * rates.tier1;
+            } else if(excess <= 20) { 
+                tierCharge = (10 * rates.tier1) + ((excess - 10) * rates.tier2);
+            } else { 
+                tierCharge = (10 * rates.tier1) + (10 * rates.tier2) + ((excess - 20) * rates.tier3);
+            }
+            return { baseCharge: rates.baseFee, tierCharge: parseFloat(tierCharge.toFixed(2)) };
+        }
+
+        function renderCustomers() {
+            const query = document.getElementById('search-customer').value.toLowerCase();
+            const tbody = document.getElementById('customer-table-body');
+            tbody.innerHTML = '';
+
+            const filtered = customers.filter(c => c.name.toLowerCase().includes(query) || c.meter.toLowerCase().includes(query) || c.acc.toLowerCase().includes(query));
+
+            if(filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-slate-400">No customers found.</td></tr>`;
+                return;
+            }
+
+            filtered.forEach(c => {
+                const actionButtons = currentRole === 'admin' ? `
+                    <button onclick="editCustomer('${c.id}')" class="p-1.5 bg-slate-100 hover:bg-blue-100 text-slate-600 hover:text-blue-600 rounded-lg transition-all" title="Edit"><i class="fa-solid fa-pen text-xs"></i></button>
+                    <button onclick="deleteCustomer('${c.id}')" class="p-1.5 bg-slate-100 hover:bg-rose-100 text-slate-600 hover:text-rose-600 rounded-lg transition-all" title="Delete"><i class="fa-solid fa-trash text-xs"></i></button>
+                ` : `
+                    <button onclick="quickRecordReadingForCustomer('${c.id}')" class="p-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg transition-all font-xs font-semibold px-2" title="Log Meter Reading"><i class="fa-solid fa-gauge mr-1"></i> Log</button>
+                `;
+
+                let statusBadgeClass = 'bg-emerald-50 text-emerald-600';
+                if(c.status === 'Inactive') statusBadgeClass = 'bg-amber-50 text-amber-600';
+                else if(c.status === 'Disconnected') statusBadgeClass = 'bg-rose-50 text-rose-600';
+
+                const statusDateStr = c.statusDate ? `<span class="block text-[10px] text-slate-400 mt-0.5">Updated: ${c.statusDate}</span>` : '';
+
+                tbody.innerHTML += `
+                    <tr class="hover:bg-slate-50/80 transition-all">
+                        <td class="p-3.5 font-mono text-xs font-semibold text-blue-600">${c.acc}</td>
+                        <td class="p-3.5 font-medium text-slate-800">${c.name}</td>
+                        <td class="p-3.5 font-mono text-xs text-slate-600">${c.meter}</td>
+                        <td class="p-3.5 text-slate-600 text-xs">${c.addr}</td>
+                        <td class="p-3.5 text-slate-600 text-xs">${c.contact || 'N/A'}</td>
+                        <td class="p-3.5 text-center">
+                            <span class="px-2.5 py-1 rounded-full text-[11px] font-semibold ${statusBadgeClass}">${c.status}</span>
+                            ${statusDateStr}
+                        </td>
+                        <td class="p-3.5 text-right space-x-1">${actionButtons}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        function openCustomerModal(editId = null) {
+            document.getElementById('customer-id-edit').value = '';
+            document.getElementById('cust-name').value = '';
+            document.getElementById('cust-acc').value = `ACC-880${customers.length + 1}`;
+            document.getElementById('cust-meter').value = `MTR-2021-0${customers.length + 1}`;
+            document.getElementById('cust-addr').value = '';
+            document.getElementById('cust-contact').value = '';
+            document.getElementById('cust-status').value = 'Active';
+
+            if(editId) {
+                document.getElementById('modal-customer-title').innerText = 'Edit Customer Details';
+                const c = customers.find(item => item.id === editId);
+                if(c) {
+                    document.getElementById('customer-id-edit').value = c.id;
+                    document.getElementById('cust-name').value = c.name;
+                    document.getElementById('cust-acc').value = c.acc;
+                    document.getElementById('cust-meter').value = c.meter;
+                    document.getElementById('cust-addr').value = c.addr;
+                    document.getElementById('cust-contact').value = c.contact;
+                    document.getElementById('cust-status').value = c.status || 'Active';
+                }
+            } else {
+                document.getElementById('modal-customer-title').innerText = 'Add New Customer';
+            }
+            document.getElementById('modal-customer').classList.remove('hidden');
+        }
+
+        function closeCustomerModal() {
+            document.getElementById('modal-customer').classList.add('hidden');
+        }
+
+        function saveCustomer(e) {
+            e.preventDefault();
+            const editId = document.getElementById('customer-id-edit').value;
+            const newStatus = document.getElementById('cust-status').value;
+
+            let existingDate = todayStr;
+            if(editId) {
+                const existingCust = customers.find(item => item.id === editId);
+                if(existingCust && existingCust.status === newStatus && existingCust.statusDate) {
+                    existingDate = existingCust.statusDate;
+                }
+            }
+
+            const data = {
+                id: editId ? editId : Date.now().toString(),
+                name: document.getElementById('cust-name').value,
+                acc: document.getElementById('cust-acc').value,
+                meter: document.getElementById('cust-meter').value,
+                addr: document.getElementById('cust-addr').value,
+                contact: document.getElementById('cust-contact').value,
+                status: newStatus,
+                statusDate: existingDate
+            };
+
+            if(editId) {
+                const index = customers.findIndex(item => item.id === editId);
+                if(index !== -1) {
+                    if(customers[index].status !== newStatus) {
+                        data.statusDate = todayStr;
+                    }
+                    customers[index] = data;
+                }
+            } else {
+                customers.push(data);
+            }
+
+            localStorage.setItem('smile_customers', JSON.stringify(customers));
+            closeCustomerModal();
+            renderCustomers();
+            updateDashboard();
+            if (currentRole === 'reader') updateReaderDashboard();
+        }
+
+        function editCustomer(id) {
+            openCustomerModal(id);
+        }
+
+        function deleteCustomer(id) {
+            if(confirm('Are you sure you want to delete this customer?')) {
+                customers = customers.filter(c => c.id !== id);
+                localStorage.setItem('smile_customers', JSON.stringify(customers));
+                renderCustomers();
+                updateDashboard();
+                if (currentRole === 'reader') updateReaderDashboard();
+            }
+        }
+
+        function clearReadingsFilter() {
+            const monthSelect = document.getElementById('readings-filter-month');
+            if(monthSelect) monthSelect.value = '';
+            renderReadings();
+        }
+
+        function renderReadings() {
+            const tbody = document.getElementById('readings-table-body');
+            const filterCountEl = document.getElementById('readings-filter-count');
+            const filterMonth = document.getElementById('readings-filter-month')?.value || '';
+            tbody.innerHTML = '';
+
+            if(invoices.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="9" class="p-6 text-center text-slate-400">No invoices or readings recorded.</td></tr>`;
+                if(filterCountEl) filterCountEl.innerText = `Showing 0 records`;
+                return;
+            }
+
+            let filteredInvoices = invoices.slice();
+            if(filterMonth) {
+                filteredInvoices = filteredInvoices.filter(inv => inv.billingMonth && inv.billingMonth.toLowerCase().includes(filterMonth.toLowerCase()));
+            }
+
+            if(filterCountEl) {
+                filterCountEl.innerText = filterMonth ? `Showing ${filteredInvoices.length} of ${invoices.length} records for month: ${filterMonth}` : `Showing all ${invoices.length} records`;
+            }
+
+            if(filteredInvoices.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="9" class="p-6 text-center text-slate-400">No invoices found matching the selected month.</td></tr>`;
+                return;
+            }
+
+            filteredInvoices.reverse().forEach(inv => {
+                const cust = customers.find(c => c.id === inv.customerId) || { name: 'Unknown Customer', acc: 'N/A' };
+                const usage = Math.max(0, inv.currReading - inv.prevReading).toFixed(2);
+                let badgeClass = 'bg-amber-50 text-amber-600';
+                if(inv.status === 'Paid') badgeClass = 'bg-emerald-50 text-emerald-600';
+                if(inv.status === 'Overdue') badgeClass = 'bg-rose-50 text-rose-600';
+
+                const deleteBtn = currentRole === 'admin' ? `
+                    <button onclick="deleteInvoice('${inv.id}')" class="p-1.5 bg-slate-100 hover:bg-rose-100 text-slate-600 hover:text-rose-600 rounded-lg transition-all" title="Delete"><i class="fa-solid fa-trash text-xs"></i></button>
+                ` : '';
+
+                const totalParking = (inv.parkingFee || 0) + (inv.advParkingPay || 0);
+
+                tbody.innerHTML += `
+                    <tr class="hover:bg-slate-50/80 transition-all">
+                        <td class="p-3.5 font-mono text-xs font-bold text-blue-600">${inv.id}</td>
+                        <td class="p-3.5">
+                            <p class="font-medium text-slate-800">${cust.name}</p>
+                            <p class="text-[11px] text-slate-400">${cust.acc} • ${inv.billingMonth}</p>
+                        </td>
+                        <td class="p-3.5 text-right font-mono text-xs font-bold">${usage} m³</td>
+                        <td class="p-3.5 text-center text-xs font-semibold text-slate-600">
+                            ₱${(inv.condoDues + (inv.advCondoPay || 0)).toFixed(2)}
+                            ${inv.advCondoMonths > 0 ? `<span class="block text-[10px] text-emerald-600 font-medium">(+${inv.advCondoMonths} mo adv)</span>` : ''}
+                        </td>
+                        <td class="p-3.5 text-center text-xs font-semibold text-slate-600">
+                            ₱${totalParking.toFixed(2)}
+                            ${inv.advParkingMonths > 0 ? `<span class="block text-[10px] text-emerald-600 font-medium">(+${inv.advParkingMonths} mo adv)</span>` : ''}
+                        </td>
+                        <td class="p-3.5 text-right font-bold text-slate-800">₱${inv.totalAmount.toFixed(2)}</td>
+                        <td class="p-3.5 text-center text-xs text-slate-600">${inv.dueDate}</td>
+                        <td class="p-3.5 text-center">
+                            <span class="px-2.5 py-1 rounded-full text-[11px] font-semibold ${badgeClass}">${inv.status}</span>
+                        </td>
+                        <td class="p-3.5 text-right space-x-1">
+                            <button onclick="printStatementOfAccount('${inv.id}')" class="p-1.5 bg-slate-100 hover:bg-blue-100 text-slate-600 hover:text-blue-600 rounded-lg transition-all" title="Print Bill"><i class="fa-solid fa-print text-xs"></i></button>
+                            <button onclick="toggleInvoiceStatus('${inv.id}')" class="p-1.5 bg-slate-100 hover:bg-emerald-100 text-slate-600 hover:text-emerald-600 rounded-lg transition-all" title="Mark Paid/Unpaid"><i class="fa-solid fa-check text-xs"></i></button>
+                            ${deleteBtn}
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        function openReadingModal() {
+            const select = document.getElementById('read-customer-select');
+            select.innerHTML = '<option value="">-- Choose Customer --</option>';
+            customers.forEach(c => {
+                select.innerHTML += `<option value="${c.id}">${c.name} (${c.acc} - ${c.meter})</option>`;
+            });
+
+            document.getElementById('read-billing-month').value = 'Sep 2026';
+            document.getElementById('read-due-date').value = '2026-10-15';
+            document.getElementById('read-prev').value = '0.00';
+            document.getElementById('read-curr').value = '0.00';
+            document.getElementById('read-has-motorcycle').checked = false;
+            document.getElementById('read-has-car').checked = false;
+            document.getElementById('read-adv-condo-months').value = 0;
+            document.getElementById('read-adv-parking-months').value = 0;
+            document.getElementById('read-status').value = 'Unpaid';
+            calculatePreviewBill();
+
+            document.getElementById('modal-reading').classList.remove('hidden');
+        }
+
+        function closeReadingModal() {
+            document.getElementById('modal-reading').classList.add('hidden');
+        }
+
+        function onCustomerSelectChange() {
+            const custId = document.getElementById('read-customer-select').value;
+            if(!custId) return;
+            const custInvoices = invoices.filter(i => i.customerId === custId);
+            if(custInvoices.length > 0) {
+                const lastInv = custInvoices[custInvoices.length - 1];
+                document.getElementById('read-prev').value = lastInv.currReading;
+            } else {
+                document.getElementById('read-prev').value = 0;
+            }
+            calculatePreviewBill();
+        }
+
+        function calculatePreviewBill() {
+            const prev = parseFloat(document.getElementById('read-prev').value) || 0;
+            const curr = parseFloat(document.getElementById('read-curr').value) || 0;
+            const usage = Math.max(0, curr - prev);
+
+            const condoDues = rates.condoDues;
+            const waterRes = calculateWaterCharge(usage);
+
+            let baseParkingFee = 0;
+            if(document.getElementById('read-has-motorcycle').checked) baseParkingFee += rates.motorcycleParking;
+            if(document.getElementById('read-has-car').checked) baseParkingFee += rates.carParking;
+
+            const advCondoMonths = parseInt(document.getElementById('read-adv-condo-months').value) || 0;
+            const advParkingMonths = parseInt(document.getElementById('read-adv-parking-months').value) || 0;
+
+            const advCondoPay = advCondoMonths * rates.condoDues;
+            const advParkingPay = advParkingMonths * baseParkingFee;
+
+            const total = condoDues + advCondoPay + waterRes.baseCharge + waterRes.tierCharge + baseParkingFee + advParkingPay;
+
+            document.getElementById('preview-usage').innerText = `${usage.toFixed(2)} m³`;
+            document.getElementById('preview-condo').innerText = `₱${condoDues.toFixed(2)}`;
+            document.getElementById('preview-adv-condo').innerText = `₱${advCondoPay.toFixed(2)} (${advCondoMonths} mo)`;
+            document.getElementById('preview-water').innerText = `₱${(waterRes.baseCharge + waterRes.tierCharge).toFixed(2)}`;
+            document.getElementById('preview-parking').innerText = `₱${baseParkingFee.toFixed(2)}`;
+            document.getElementById('preview-adv-parking').innerText = `₱${advParkingPay.toFixed(2)} (${advParkingMonths} mo)`;
+            document.getElementById('preview-total').innerText = `₱${total.toFixed(2)}`;
+        }
+
+        function saveReadingAndBilling(e) {
+            e.preventDefault();
+            const customerId = document.getElementById('read-customer-select').value;
+            const billingMonth = document.getElementById('read-billing-month').value;
+            const dueDate = document.getElementById('read-due-date').value;
+            const prevReading = parseFloat(document.getElementById('read-prev').value) || 0;
+            const currReading = parseFloat(document.getElementById('read-curr').value) || 0;
+            const usage = Math.max(0, currReading - prevReading);
+
+            const condoDues = rates.condoDues;
+            const waterRes = calculateWaterCharge(usage);
+            const hasMotorcycle = document.getElementById('read-has-motorcycle').checked;
+            const hasCar = document.getElementById('read-has-car').checked;
+
+            let baseParkingFee = 0;
+            if(hasMotorcycle) baseParkingFee += rates.motorcycleParking;
+            if(hasCar) baseParkingFee += rates.carParking;
+
+            const advCondoMonths = parseInt(document.getElementById('read-adv-condo-months').value) || 0;
+            const advParkingMonths = parseInt(document.getElementById('read-adv-parking-months').value) || 0;
+
+            const advCondoPay = advCondoMonths * rates.condoDues;
+            const advParkingPay = advParkingMonths * baseParkingFee;
+
+            const totalAmount = condoDues + advCondoPay + waterRes.baseCharge + waterRes.tierCharge + baseParkingFee + advParkingPay;
+            const status = document.getElementById('read-status').value;
+
+            const newInv = {
+                id: `INV-2026-0${invoices.length + 10}`,
+                customerId,
+                billingMonth,
+                dueDate,
+                paidDate: status === 'Paid' ? todayStr : null,
+                prevReading,
+                currReading,
+                condoDues,
+                advCondoMonths,
+                advCondoPay,
+                baseCharge: waterRes.baseCharge,
+                tierCharge: waterRes.tierCharge,
+                hasMotorcycle,
+                hasCar,
+                parkingFee: baseParkingFee,
+                advParkingMonths,
+                advParkingPay,
+                totalAmount,
+                status
+            };
+
+            invoices.push(newInv);
+            localStorage.setItem('smile_invoices', JSON.stringify(invoices));
+            closeReadingModal();
+            renderReadings();
+            updateDashboard();
+            if (currentRole === 'reader') updateReaderDashboard();
+        }
+
+        function toggleInvoiceStatus(id) {
+            const inv = invoices.find(i => i.id === id);
+            if(inv) {
+                if(inv.status === 'Paid') {
+                    inv.status = 'Unpaid';
+                    inv.paidDate = null;
+                } else {
+                    inv.status = 'Paid';
+                    inv.paidDate = todayStr;
+                }
+
+                localStorage.setItem('smile_invoices', JSON.stringify(invoices));
+                renderReadings();
+                updateDashboard();
+                if (currentRole === 'reader') updateReaderDashboard();
+            }
+        }
+
+        function deleteInvoice(id) {
+            if(confirm('Are you sure you want to delete this invoice?')) {
+                invoices = invoices.filter(i => i.id !== id);
+                localStorage.setItem('smile_invoices', JSON.stringify(invoices));
+                renderReadings();
+                updateDashboard();
+                if (currentRole === 'reader') updateReaderDashboard();
+            }
+        }
+
+        function printStatementOfAccount(invoiceId) {
+            const inv = invoices.find(i => i.id === invoiceId);
+            if(!inv) return;
+            const cust = customers.find(c => c.id === inv.customerId) || { name: 'Valued Resident', acc: 'ACC-0000', addr: 'Smile CitiHomes 1', meter: 'MTR-0000' };
+            const usage = Math.max(0, inv.currReading - inv.prevReading).toFixed(2);
+
+            document.getElementById('print-invoice-id').innerText = inv.id;
+            document.getElementById('print-date').innerText = `Date: ${todayStr}`;
+            document.getElementById('print-cust-name').innerText = cust.name;
+            document.getElementById('print-cust-acc').innerText = `Account #: ${cust.acc}`;
+            document.getElementById('print-cust-addr').innerText = cust.addr;
+            document.getElementById('print-meter-sn').innerText = `Meter S/N: ${cust.meter}`;
+            document.getElementById('print-reading-date').innerText = `Billing Month: ${inv.billingMonth}`;
+            document.getElementById('print-due-date').innerText = `Due Date: ${inv.dueDate}`;
+
+            document.getElementById('print-prev-reading').innerText = inv.prevReading.toFixed(2);
+            document.getElementById('print-curr-reading').innerText = inv.currReading.toFixed(2);
+            document.getElementById('print-usage').innerText = `${usage} m³`;
+
+            document.getElementById('print-condo-dues').innerText = `₱${inv.condoDues.toFixed(2)}`;
+
+            const advCondoRow = document.getElementById('print-adv-condo-row');
+            if(inv.advCondoPay > 0) {
+                advCondoRow.classList.remove('hidden');
+                document.getElementById('print-adv-condo-label').innerText = `Advance Condo Dues (${inv.advCondoMonths} mo)`;
+                document.getElementById('print-adv-condo-charge').innerText = `₱${inv.advCondoPay.toFixed(2)}`;
+            } else {
+                advCondoRow.classList.add('hidden');
+            }
+
+            document.getElementById('print-base-charge').innerText = `₱${inv.baseCharge.toFixed(2)}`;
+            document.getElementById('print-tier-charge').innerText = `₱${inv.tierCharge.toFixed(2)}`;
+
+            const parkingRow = document.getElementById('print-parking-row');
+            if(inv.parkingFee > 0) {
+                parkingRow.classList.remove('hidden');
+                let pText = 'Parking Fee (Current)';
+                if(inv.hasMotorcycle && inv.hasCar) pText = 'Motorcycle & Car Parking Fee';
+                else if(inv.hasMotorcycle) pText = 'Motorcycle Parking Fee';
+                else if(inv.hasCar) pText = 'Car Parking Fee';
+                document.getElementById('print-parking-label').innerText = pText;
+                document.getElementById('print-parking-charge').innerText = `₱${inv.parkingFee.toFixed(2)}`;
+            } else {
+                parkingRow.classList.add('hidden');
+            }
+
+            const advParkingRow = document.getElementById('print-adv-parking-row');
+            if(inv.advParkingPay > 0) {
+                advParkingRow.classList.remove('hidden');
+                document.getElementById('print-adv-parking-label').innerText = `Advance Parking Fee (${inv.advParkingMonths} mo)`;
+                document.getElementById('print-adv-parking-charge').innerText = `₱${inv.advParkingPay.toFixed(2)}`;
+            } else {
+                advParkingRow.classList.add('hidden');
+            }
+
+            document.getElementById('print-total-amount').innerText = `₱${inv.totalAmount.toFixed(2)}`;
+            document.getElementById('print-status').innerText = inv.status;
+
+            // Ensure single bill template is visible and all-container is hidden
+            document.getElementById('printable-bill').classList.remove('hidden');
+            document.getElementById('printable-all-container').innerHTML = '';
+
+            setTimeout(() => {
+                window.print();
+            }, 300);
+        }
+
+        function printAllStatementsOfAccount() {
+            if(invoices.length === 0) {
+                alert('No invoices available to print.');
+                return;
+            }
+
+            const container = document.getElementById('printable-all-container');
+            container.innerHTML = '';
+            // Hide single template if active
+            document.getElementById('printable-bill').classList.add('hidden');
+
+            invoices.forEach((inv, index) => {
+                const cust = customers.find(c => c.id === inv.customerId) || { name: 'Valued Resident', acc: 'ACC-0000', addr: 'Smile CitiHomes 1', meter: 'MTR-0000' };
+                const usage = Math.max(0, inv.currReading - inv.prevReading).toFixed(2);
+
+                let parkingText = '';
+                let pFeeShow = inv.parkingFee > 0;
+                if(pFeeShow) {
+                    if(inv.hasMotorcycle && inv.hasCar) parkingText = 'Motorcycle & Car Parking Fee';
+                    else if(inv.hasMotorcycle) parkingText = 'Motorcycle Parking Fee';
+                    else if(inv.hasCar) parkingText = 'Car Parking Fee';
+                }
+
+                const pageDiv = document.createElement('div');
+                pageDiv.className = 'print-only p-2 mx-auto bg-white text-slate-900 font-sans printable-page';
+                pageDiv.style.cssText = 'width: 148mm; min-height: 128mm; max-height: 132mm; overflow: hidden; box-sizing: border-box;';
+                
+                pageDiv.innerHTML = `
+                    <div class="border-2 border-slate-800 p-2.5 rounded-lg space-y-1.5 text-[9.5px]">
+                        <div class="flex justify-between items-center border-b-2 border-slate-800 pb-1.5">
+                            <div class="flex items-center space-x-2">
+                                <img src="https://media.base44.com/images/public/user_6aa64af8b3deedf5c8841878/baad345a4_SmileLogo.png" alt="Smile Logo" class="h-8 w-8 object-contain rounded-full border border-slate-300">
+                                <div>
+                                    <h1 class="text-xs font-bold uppercase tracking-wider text-blue-900 leading-tight">Smile CitiHomes 1 Condominium</h1>
+                                    <p class="text-[8px] text-slate-600">Smile Citihomes 1, Zabarte Rd., Brgy. Kaligayahan, Novaliches, QC</p>
+                                    <p class="text-[8px] text-slate-600">Condo Dues, Water Works & Parking Billing</p>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <span class="inline-block bg-slate-100 text-slate-800 border border-slate-400 font-bold px-1.5 py-0.5 text-[9px] rounded">STATEMENT OF ACCOUNT</span>
+                                <p class="text-[10px] font-mono font-bold mt-0.5">${inv.id}</p>
+                                <p class="text-[8px] text-slate-500">Date: ${todayStr}</p>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-2 bg-slate-50 p-1.5 rounded border border-slate-200">
+                            <div>
+                                <p class="text-[8px] text-slate-500 uppercase font-semibold">Account Details</p>
+                                <p class="font-bold text-[10px] text-slate-800 mt-0.5">${cust.name}</p>
+                                <p class="text-[8.5px] text-slate-600">Account #: ${cust.acc}</p>
+                                <p class="text-[8.5px] text-slate-600">${cust.addr}</p>
+                            </div>
+                            <div>
+                                <p class="text-[8px] text-slate-500 uppercase font-semibold">Meter & Billing Details</p>
+                                <p class="font-bold text-[10px] text-slate-800 mt-0.5">Meter S/N: ${cust.meter}</p>
+                                <p class="text-[8.5px] text-slate-600">Billing Month: ${inv.billingMonth}</p>
+                                <p class="text-[8.5px] text-rose-600 font-semibold">Due Date: ${inv.dueDate}</p>
+                            </div>
+                        </div>
+
+                        <div>
+                            <table class="w-full text-[9.5px] text-left border-collapse">
+                                <thead>
+                                    <tr class="bg-slate-800 text-white font-semibold">
+                                        <th class="p-0.5 px-1">Prev Reading (m³)</th>
+                                        <th class="p-0.5 px-1">Curr Reading (m³)</th>
+                                        <th class="p-0.5 px-1 text-right">Consumption (m³)</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="border-b border-slate-300">
+                                    <tr>
+                                        <td class="p-0.5 px-1">${inv.prevReading.toFixed(2)}</td>
+                                        <td class="p-0.5 px-1">${inv.currReading.toFixed(2)}</td>
+                                        <td class="p-0.5 px-1 text-right font-bold text-[10px]">${usage} m³</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="space-y-0.5 border-t border-slate-200 pt-1">
+                            <div class="flex justify-between">
+                                <span class="text-slate-600 font-semibold">Condominium Dues (Current Month)</span>
+                                <span class="font-medium">₱${inv.condoDues.toFixed(2)}</span>
+                            </div>
+                            ${inv.advCondoPay > 0 ? `
+                            <div class="flex justify-between text-emerald-700">
+                                <span>Advance Condo Dues (${inv.advCondoMonths} mo)</span>
+                                <span class="font-medium">₱${inv.advCondoPay.toFixed(2)}</span>
+                            </div>` : ''}
+                            <div class="flex justify-between">
+                                <span class="text-slate-600">Base Water Charge (Includes 10m³)</span>
+                                <span class="font-medium">₱${inv.baseCharge.toFixed(2)}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-slate-600">Tiered Water Consumption Charge</span>
+                                <span class="font-medium">₱${inv.tierCharge.toFixed(2)}</span>
+                            </div>
+                            ${pFeeShow ? `
+                            <div class="flex justify-between">
+                                <span class="text-slate-600">${parkingText}</span>
+                                <span class="font-medium">₱${inv.parkingFee.toFixed(2)}</span>
+                            </div>` : ''}
+                            ${inv.advParkingPay > 0 ? `
+                            <div class="flex justify-between text-emerald-700">
+                                <span>Advance Parking Fee (${inv.advParkingMonths} mo)</span>
+                                <span class="font-medium">₱${inv.advParkingPay.toFixed(2)}</span>
+                            </div>` : ''}
+                            <div class="flex justify-between border-t-2 border-slate-800 pt-1 text-[10.5px] font-bold">
+                                <span>TOTAL AMOUNT DUE</span>
+                                <span class="text-blue-900 text-[11px]">₱${inv.totalAmount.toFixed(2)}</span>
+                            </div>
+                        </div>
+
+                        <div class="text-[8px] text-slate-500 border-t border-dashed border-slate-300 pt-1 flex justify-between items-center">
+                            <div>
+                                <p class="font-semibold text-slate-700">Payment Channels:</p>
+                                <p>GCash / Maya (Biller Code: SMILE CONDO & WATER) • Administration Office</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="font-bold text-slate-800">Status: <span class="uppercase">${inv.status}</span></p>
+                            </div>
+                        </div>
+
+                        <div class="border-t border-slate-300 pt-0.5 text-[8px] text-slate-700 space-y-0">
+                            <p class="font-bold uppercase tracking-wider text-slate-800 mb-0">Important Reminders & Regulations:</p>
+                            <ul class="list-disc pl-3 space-y-0 text-slate-600">
+                                <li>All overdue accounts are subject to a 5% penalty per month after 7 days from the due date.</li>
+                                <li>Delinquent accounts for 7 days will be subject to facility disconnection. Reconnection fee: ₱350.00.</li>
+                            </ul>
+                        </div>
+                    </div>
+                `;
+
+                container.appendChild(pageDiv);
+            });
+
+            setTimeout(() => {
+                window.print();
+            }, 300);
+        }
+
+        function updateDashboard() {
+            let totalBilled = 0;
+            let totalPaid = 0;
+            let paidCount = 0;
+            let totalUnpaid = 0;
+            let unpaidCount = 0;
+            let totalOverdue = 0;
+            let overdueCount = 0;
+
+            invoices.forEach(inv => {
+                totalBilled += inv.totalAmount;
+                if(inv.status === 'Paid') {
+                    totalPaid += inv.totalAmount;
+                    paidCount++;
+                } else if(inv.status === 'Unpaid') {
+                    totalUnpaid += inv.totalAmount;
+                    unpaidCount++;
+                } else if(inv.status === 'Overdue') {
+                    totalOverdue += inv.totalAmount;
+                    overdueCount++;
+                }
+            });
+
+            document.getElementById('kpi-total-billed').innerText = `₱${totalBilled.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            document.getElementById('kpi-total-paid').innerText = `₱${totalPaid.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            document.getElementById('kpi-paid-count').innerText = `${paidCount} invoices settled`;
+
+            document.getElementById('kpi-total-unpaid').innerText = `₱${totalUnpaid.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            document.getElementById('kpi-unpaid-count').innerText = `${unpaidCount} awaiting payment`;
+
+            document.getElementById('kpi-total-overdue').innerText = `₱${totalOverdue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            document.getElementById('kpi-overdue-count').innerText = `${overdueCount} require collection`;
+
+            const recentList = document.getElementById('recent-invoices-list');
+            if(recentList) {
+                recentList.innerHTML = '';
+                if(invoices.length === 0) {
+                    recentList.innerHTML = `<p class="text-xs text-slate-400 text-center py-4">No recent invoices.</p>`;
+                } else {
+                    invoices.slice(-5).reverse().forEach(inv => {
+                        const cust = customers.find(c => c.id === inv.customerId) || { name: 'Resident' };
+                        recentList.innerHTML += `
+                            <div class="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100 text-xs">
+                                <div>
+                                    <p class="font-bold text-slate-800">${cust.name}</p>
+                                    <p class="text-slate-400">${inv.billingMonth} • <span class="font-mono text-blue-600">${inv.id}</span></p>
+                                </div>
+                                <div class="text-right">
+                                    <p class="font-bold text-slate-800">₱${inv.totalAmount.toFixed(2)}</p>
+                                    <span class="font-semibold ${inv.status === 'Paid' ? 'text-emerald-600' : 'text-amber-600'}">${inv.status}</span>
+                                </div>
+                            </div>
+                        `;
+                    });
+                }
+            }
+
+            renderDailySummaryTable();
+            renderMonthlySummaryTable();
+        }
+
+        function clearDailyFilter() {
+            const dateInput = document.getElementById('daily-filter-date');
+            if(dateInput) dateInput.value = '';
+            renderDailySummaryTable();
+        }
+
+        function renderDailySummaryTable() {
+            const tableBody = document.getElementById('daily-summary-table-body');
+            if(!tableBody) return;
+            tableBody.innerHTML = '';
+
+            const filterDate = document.getElementById('daily-filter-date')?.value || '';
+            const dailyMap = {};
+            let todayCollected = 0;
+
+            invoices.forEach(inv => {
+                if(inv.status === 'Paid') {
+                    const payDate = inv.paidDate || todayStr;
+                    if(!dailyMap[payDate]) {
+                        dailyMap[payDate] = { count: 0, consumption: 0, condoDues: 0, waterCharges: 0, parkingFees: 0, total: 0 };
+                    }
+                    dailyMap[payDate].count += 1;
+                    const usage = Math.max(0, inv.currReading - inv.prevReading);
+                    dailyMap[payDate].consumption += usage;
+
+                    const condoSum = (inv.condoDues || 0) + (inv.advCondoPay || 0);
+                    const waterSum = (inv.baseCharge || 0) + (inv.tierCharge || 0);
+                    const parkingSum = (inv.parkingFee || 0) + (inv.advParkingPay || 0);
+
+                    dailyMap[payDate].condoDues += condoSum;
+                    dailyMap[payDate].waterCharges += waterSum;
+                    dailyMap[payDate].parkingFees += parkingSum;
+                    dailyMap[payDate].total += inv.totalAmount;
+
+                    if(payDate === todayStr) {
+                        todayCollected += inv.totalAmount;
+                    }
+                }
+            });
+
+            document.getElementById('kpi-today-collected').innerText = `Today: ₱${todayCollected.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+
+            let dates = Object.keys(dailyMap).sort().reverse();
+            if(filterDate) {
+                dates = dates.filter(d => d === filterDate);
+            }
+
+            if(dates.length === 0) {
+                tableBody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-slate-400">No settled daily collection records found for the selected date.</td></tr>`;
+                return;
+            }
+
+            dates.forEach(d => {
+                const data = dailyMap[d];
+                tableBody.innerHTML += `
+                    <tr class="hover:bg-slate-50/80 transition-all">
+                        <td class="p-3 font-semibold text-slate-800 font-mono">${d}</td>
+                        <td class="p-3 text-right font-mono">${data.count} settled</td>
+                        <td class="p-3 text-right font-mono">${data.consumption.toFixed(2)} m³</td>
+                        <td class="p-3 text-right font-mono">₱${data.condoDues.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                        <td class="p-3 text-right font-mono">₱${data.waterCharges.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                        <td class="p-3 text-right font-mono">₱${data.parkingFees.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                        <td class="p-3 text-right font-mono font-bold text-emerald-600">₱${data.total.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        function renderMonthlySummaryTable() {
+            const tableBody = document.getElementById('monthly-summary-table-body');
+            if(!tableBody) return;
+            tableBody.innerHTML = '';
+
+            const summaryMap = {};
+            invoices.forEach(inv => {
+                const month = inv.billingMonth || 'Current Period';
+                if(!summaryMap[month]) {
+                    summaryMap[month] = { count: 0, consumption: 0, billed: 0, collected: 0, pending: 0 };
+                }
+                summaryMap[month].count += 1;
+                const usage = Math.max(0, inv.currReading - inv.prevReading);
+                summaryMap[month].consumption += usage;
+                summaryMap[month].billed += inv.totalAmount;
+                if(inv.status === 'Paid') {
+                    summaryMap[month].collected += inv.totalAmount;
+                } else {
+                    summaryMap[month].pending += inv.totalAmount;
+                }
+            });
+
+            const months = Object.keys(summaryMap);
+            if(months.length === 0) {
+                tableBody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-slate-400">No monthly summary data available.</td></tr>`;
+                return;
+            }
+
+            months.forEach(m => {
+                const data = summaryMap[m];
+                const rate = data.billed > 0 ? ((data.collected / data.billed) * 100).toFixed(1) : '0.0';
+                tableBody.innerHTML += `
+                    <tr class="hover:bg-slate-50/80 transition-all">
+                        <td class="p-3 font-semibold text-slate-800">${m}</td>
+                        <td class="p-3 text-right font-mono">${data.count}</td>
+                        <td class="p-3 text-right font-mono">${data.consumption.toFixed(2)} m³</td>
+                        <td class="p-3 text-right font-mono font-bold text-slate-800">₱${data.billed.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                        <td class="p-3 text-right font-mono font-bold text-emerald-600">₱${data.collected.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                        <td class="p-3 text-right font-mono font-bold text-amber-600">₱${data.pending.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                        <td class="p-3 text-center">
+                            <span class="bg-blue-50 text-blue-700 px-2.5 py-1 rounded-full text-xs font-semibold">${rate}%</span>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        function initChart() {
+            const chartCanvas = document.getElementById('consumptionChart');
+            if(!chartCanvas) return;
+            const ctx = chartCanvas.getContext('2d');
+            if(consumptionChartInstance) {
+                consumptionChartInstance.destroy();
+            }
+
+            const labels = customers.map(c => c.name);
+            const dataConsumption = customers.map(c => {
+                const custInvoices = invoices.filter(i => i.customerId === c.id);
+                if(custInvoices.length > 0) {
+                    const latest = custInvoices[custInvoices.length - 1];
+                    return Math.max(0, latest.currReading - latest.prevReading);
+                }
+                return 0;
+            });
+
+            consumptionChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Water Consumption (m³)',
+                        data: dataConsumption,
+                        backgroundColor: 'rgba(37, 99, 235, 0.8)',
+                        borderColor: 'rgb(37, 99, 235)',
+                        borderWidth: 1,
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: { beginAtZero: true, grid: { color: 'rgba(226, 232, 240, 0.6)' } },
+                        x: { grid: { display: false } }
+                    }
+                }
+            });
+        }
+
+        function exportCustomersExcel() {
+            const wsData = customers.map(c => ({
+                'Account Number': c.acc,
+                'Customer Name': c.name,
+                'Meter Serial': c.meter,
+                'Address': c.addr,
+                'Contact Number': c.contact,
+                'Status': c.status,
+                'Status Update Date': c.statusDate || 'N/A'
+            }));
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.json_to_sheet(wsData);
+            XLSX.utils.book_append_sheet(wb, ws, "Customers");
+            XLSX.writeFile(wb, "Smile_CitiHomes_Customers.xlsx");
+        }
+
+        function exportInvoicesExcel() {
+            const wsData = invoices.map(i => {
+                const c = customers.find(item => item.id === i.customerId) || {};
+                return {
+                    'Invoice ID': i.id,
+                    'Customer Name': c.name || 'Unknown',
+                    'Account Number': c.acc || 'N/A',
+                    'Billing Month': i.billingMonth,
+                    'Due Date': i.dueDate,
+                    'Paid Date': i.paidDate || 'Unpaid',
+                    'Previous Reading': i.prevReading,
+                    'Current Reading': i.currReading,
+                    'Consumption (m³)': Math.max(0, i.currReading - i.prevReading),
+                    'Condo Dues (Current)': i.condoDues,
+                    'Advance Condo Months': i.advCondoMonths || 0,
+                    'Advance Condo Paid (₱)': i.advCondoPay || 0,
+                    'Water Base': i.baseCharge,
+                    'Water Tier': i.tierCharge,
+                    'Parking Fee (Current)': i.parkingFee || 0,
+                    'Advance Parking Months': i.advParkingMonths || 0,
+                    'Advance Parking Paid (₱)': i.advParkingPay || 0,
+                    'Total Amount (₱)': i.totalAmount,
+                    'Status': i.status
+                };
+            });
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.json_to_sheet(wsData);
+            XLSX.utils.book_append_sheet(wb, ws, "Invoices_Readings");
+            XLSX.writeFile(wb, "Smile_CitiHomes_Invoices.xlsx");
+        }
+
+        function exportDailySummaryExcel() {
+            const filterDate = document.getElementById('daily-filter-date')?.value || '';
+            const dailyMap = {};
+            invoices.forEach(inv => {
+                if(inv.status === 'Paid') {
+                    const payDate = inv.paidDate || todayStr;
+                    if(!dailyMap[payDate]) {
+                        dailyMap[payDate] = { count: 0, consumption: 0, condoDues: 0, waterCharges: 0, parkingFees: 0, total: 0 };
+                    }
+                    dailyMap[payDate].count += 1;
+                    const usage = Math.max(0, inv.currReading - inv.prevReading);
+                    dailyMap[payDate].consumption += usage;
+
+                    const condoSum = (inv.condoDues || 0) + (inv.advCondoPay || 0);
+                    const waterSum = (inv.baseCharge || 0) + (inv.tierCharge || 0);
+                    const parkingSum = (inv.parkingFee || 0) + (inv.advParkingPay || 0);
+
+                    dailyMap[payDate].condoDues += condoSum;
+                    dailyMap[payDate].waterCharges += waterSum;
+                    dailyMap[payDate].parkingFees += parkingSum;
+                    dailyMap[payDate].total += inv.totalAmount;
+                }
+            });
+
+            let dates = Object.keys(dailyMap).sort().reverse();
+            if(filterDate) {
+                dates = dates.filter(d => d === filterDate);
+            }
+
+            const wsData = dates.map(d => ({
+                'Payment Date': d,
+                'Settled Invoices': dailyMap[d].count,
+                'Water Usage (m³)': parseFloat(dailyMap[d].consumption.toFixed(2)),
+                'Condo Dues Total (₱)': parseFloat(dailyMap[d].condoDues.toFixed(2)),
+                'Water Charges Total (₱)': parseFloat(dailyMap[d].waterCharges.toFixed(2)),
+                'Parking Fees Total (₱)': parseFloat(dailyMap[d].parkingFees.toFixed(2)),
+                'Daily Cash Collected (₱)': parseFloat(dailyMap[d].total.toFixed(2))
+            }));
+
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.json_to_sheet(wsData);
+            XLSX.utils.book_append_sheet(wb, ws, "Daily_Summary");
+            XLSX.writeFile(wb, filterDate ? `Smile_CitiHomes_Daily_Collection_${filterDate}.xlsx` : "Smile_CitiHomes_Daily_Collection_Summary.xlsx");
+        }
+
+        function exportMonthlySummaryExcel() {
+            const summaryMap = {};
+            invoices.forEach(inv => {
+                const month = inv.billingMonth || 'Current Period';
+                if(!summaryMap[month]) {
+                    summaryMap[month] = { count: 0, consumption: 0, billed: 0, collected: 0, pending: 0 };
+                }
+                summaryMap[month].count += 1;
+                const usage = Math.max(0, inv.currReading - inv.prevReading);
+                summaryMap[month].consumption += usage;
+                summaryMap[month].billed += inv.totalAmount;
+                if(inv.status === 'Paid') summaryMap[month].collected += inv.totalAmount;
+                else summaryMap[month].pending += inv.totalAmount;
+            });
+
+            const wsData = Object.keys(summaryMap).map(m => ({
+                'Billing Month': m,
+                'Total Invoices': summaryMap[m].count,
+                'Consumption (m³)': parseFloat(summaryMap[m].consumption.toFixed(2)),
+                'Billed Total (₱)': parseFloat(summaryMap[m].billed.toFixed(2)),
+                'Collected Total (₱)': parseFloat(summaryMap[m].collected.toFixed(2)),
+                'Pending Total (₱)': parseFloat(summaryMap[m].pending.toFixed(2)),
+                'Collection Rate (%)': summaryMap[m].billed > 0 ? ((summaryMap[m].collected / summaryMap[m].billed) * 100).toFixed(1) + '%' : '0%'
+            }));
+
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.json_to_sheet(wsData);
+            XLSX.utils.book_append_sheet(wb, ws, "Monthly_Summary");
+            XLSX.writeFile(wb, "Smile_CitiHomes_Monthly_Summary.xlsx");
+        }
+
+        function importInvoicesExcel(e) {
+            const file = e.target.files[0];
+            if(!file) return;
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                try {
+                    const data = new Uint8Array(evt.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    const json = XLSX.utils.sheet_to_json(worksheet);
+
+                    if(json.length > 0) {
+                        alert(`Successfully read ${json.length} rows from Excel file. Syncing records...`);
+                        renderReadings();
+                        updateDashboard();
+                    }
+                } catch(err) {
+                    alert('Error parsing Excel file: ' + err.message);
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+    </script>
+</body>
+</html>
